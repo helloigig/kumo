@@ -16,7 +16,11 @@ import {
   type KumoInputSize,
   type KumoInputVariant,
 } from "../input/input";
-import { Field, type FieldErrorMatch } from "../field/field";
+import {
+  Field,
+  normalizeFieldError,
+  type FieldErrorMatch,
+} from "../field/field";
 import { useCopyFeedback } from "../../utils/use-copy-feedback";
 
 export const KUMO_SENSITIVE_INPUT_VARIANTS = KUMO_INPUT_VARIANTS;
@@ -120,9 +124,12 @@ export const SensitiveInput = forwardRef<HTMLInputElement, SensitiveInputProps>(
     // Auto-apply error styling when error prop is truthy
     // Explicit variant prop takes precedence for backwards compatibility
     const variant = variantProp ?? (error ? "error" : "default");
-    // For aria-label, only use string labels (ReactNode labels can't be used for aria-label)
+    // Name for the masked container. Prefer a string label, then the
+    // consumer's aria-label (ReactNode labels can't be used for aria-label).
     const ariaLabelFallback =
-      typeof label === "string" ? label : "Sensitive value";
+      typeof label === "string"
+        ? label
+        : (inputProps["aria-label"] ?? "Sensitive value");
     const isControlled = controlledValue !== undefined;
     const [internalValue, setInternalValue] = useState(defaultValue);
     const value = isControlled ? controlledValue : internalValue;
@@ -492,21 +499,15 @@ export const SensitiveInput = forwardRef<HTMLInputElement, SensitiveInputProps>(
       </div>
     );
 
-    // Render with Field wrapper if label is provided
-    if (label) {
+    // Render with Field wrapper if label, error, or description is provided
+    if (label || error || description) {
       return (
         <Field
           label={label}
           required={required}
           labelTooltip={labelTooltip}
           description={description}
-          error={
-            error
-              ? typeof error === "string"
-                ? { message: error, match: true }
-                : error
-              : undefined
-          }
+          error={normalizeFieldError(error)}
         >
           {input}
         </Field>

@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vite-plus/test";
 import { createElement } from "react";
-import { render } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { SensitiveInput } from "./sensitive-input";
 
 describe("SensitiveInput", () => {
@@ -44,5 +44,56 @@ describe("SensitiveInput", () => {
     // Error styling (ring-kumo-danger) is on the container div wrapping the password input
     const inputEl = container.querySelector("input");
     expect(inputEl?.parentElement?.className).toContain("ring-kumo-danger");
+  });
+
+  // Description and error without a visible label (#855)
+  it("renders description without label", () => {
+    const { container } = render(
+      <SensitiveInput aria-label="Secret" description="Keep this private" />,
+    );
+    const description = screen.getByText("Keep this private");
+    expect(container.querySelector("label")).toBeNull();
+    expect(
+      container.querySelector("input")?.getAttribute("aria-describedby"),
+    ).toContain(description.id);
+  });
+
+  it("renders error message without label when error is a string", () => {
+    render(<SensitiveInput aria-label="Secret" error="A value is required" />);
+    expect(screen.getByText("A value is required")).toBeTruthy();
+  });
+
+  it("renders error message without label when error is an object", () => {
+    render(
+      <SensitiveInput
+        aria-label="Secret"
+        error={{ message: "Required field", match: true }}
+      />,
+    );
+    expect(screen.getByText("Required field")).toBeTruthy();
+  });
+
+  it("keeps its aria-label as the name with only a description", () => {
+    const { container } = render(
+      <SensitiveInput aria-label="Secret" description="Help text" />,
+    );
+    expect(container.querySelector("label")).toBeNull();
+    expect(container.querySelector("input")?.getAttribute("aria-label")).toBe(
+      "Secret",
+    );
+  });
+
+  it("uses aria-label to name the masked container", () => {
+    render(
+      <SensitiveInput
+        aria-label="Secret"
+        defaultValue="sk_live_abc123"
+        description="Keep this private"
+      />,
+    );
+    expect(
+      screen.getByRole("button", { name: "Secret, masked." }),
+    ).toBeTruthy();
+    expect(screen.getByText("Keep this private")).toBeTruthy();
   });
 });
